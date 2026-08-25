@@ -16,3 +16,12 @@ exec python -m phone_eye_http   # or: uvicorn-style host of your choice
 ```
 
 The tool surface is identical either way — packaging is convenience, not API.
+
+## Why not a native dsh plugin?
+
+phone-eye's public surface is MCP-first (works with Claude Code, Codex, Cursor,
+dsh, anything). A native dsh-only bundle would lock the same five verbs to one
+client. The `dsh.bundle` manifest in package.json exists so `dsh plugin add`
+works for dsh-first users, but the recommended wiring for dsh is the official
+`@deepseek-ai/dsh-mcp-client` entry pointing at this server (stdio or
+streamable-http) — see the README's install section.

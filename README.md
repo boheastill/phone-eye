@@ -110,3 +110,14 @@ own screen, read the buttons, and tapped "Allow" itself.
 ## License
 
 MIT
+
+## FAQ
+
+**Vision server? I don't have one.** Any MCP server exposing
+`describe_image(path, question)` works. The quickest cloud option is a GLM
+vision endpoint; for fully-offline, a local Qwen-VL (llama.cpp / Ollama
+OpenAI-compatible + a 20-line adapter) keeps every pixel on your LAN.
+
+**Why not a dsh-native plugin?** MCP-first means the same five verbs work in
+every client. dsh users can wire it via `@deepseek-ai/dsh-mcp-client` or
+`dsh plugin add`.
