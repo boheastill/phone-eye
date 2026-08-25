@@ -121,3 +121,11 @@ OpenAI-compatible + a 20-line adapter) keeps every pixel on your LAN.
 **Why not a dsh-native plugin?** MCP-first means the same five verbs work in
 every client. dsh users can wire it via `@deepseek-ai/dsh-mcp-client` or
 `dsh plugin add`.
+
+## Verified on
+
+| Device | Android | Connection | Notes |
+|---|---|---|---|
+| Redmi K40 Gaming (ares) | 13 (HyperOS) | Wi-Fi adb (`adb tcpip 5555`) | daily driver of the author's fleet |
+
+Add yours via a PR to this table.
