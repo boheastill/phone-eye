@@ -1,0 +1,6 @@
+# phone-eye — dsh bundle manifest hook
+# (本仓是 MCP server 为主; dsh 用户推荐经 mcp-client 接线,
+#  此 manifest 使 dsh plugin add 路径也可用)
+- insert:
+    - id: phone-eye
+      name: phone-eye

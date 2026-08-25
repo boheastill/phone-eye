@@ -30,7 +30,6 @@ import re
 import subprocess
 import sys
 import time
-from typing import Optional
 
 import requests
 
@@ -58,7 +57,7 @@ def _adb(*args: str, timeout: int = 30, binary: bool = False) -> bytes:
 def _shot_path() -> str:
     d = pathlib.Path(SHOT_DIR)
     d.mkdir(parents=True, exist_ok=True)
-    return str(d / f"screen_{int(time.time())}.png")
+    return str(d / f"screen_{int(time.time() * 1000)}.png")  # ms: no same-second clobber
 
 
 # ------------------------------------------------------------- vision MCP ----
@@ -134,7 +133,7 @@ def _grab_png() -> bytes:
     if not data or data[:4] != b"\x89PNG":
         raise RuntimeError(
             "screencap returned empty/non-PNG (known MIUI quirk after long "
-            "sessions; reboot the phone to restore, or use use_tree=True)")
+            "sessions; retry, or reboot the phone to restore)")
     return data
 
 

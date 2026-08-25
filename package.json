@@ -1,0 +1,15 @@
+{
+  "name": "phone-eye",
+  "version": "0.1.0",
+  "description": "Let your AI agent see and operate a real Android phone \u2014 vision + UI-tree fusion over adb, for any MCP client",
+  "main": "server.py",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "start": "python server.py"
+  }
+}
