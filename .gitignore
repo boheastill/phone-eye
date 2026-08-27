@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 out.jsonl
+.internal/
+整改单.md
+docs/PROJECT-internal.md
+docs/GO-TO-MARKET-internal.md
