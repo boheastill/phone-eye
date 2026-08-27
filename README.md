@@ -66,6 +66,29 @@ Wire it into your client (stdio):
 Or run it as an HTTP service (streamable-http) behind your own fleet and add
 `http://<host>:8122/mcp` — see [docs/fleet.md](docs/fleet.md).
 
+### Docker (optional)
+
+The repo ships a `Dockerfile` (Python 3.12 + adb) so the same stdio server can
+run containerized:
+
+```bash
+podman build -t phone-eye .        # or: docker build -t phone-eye .
+# smoke test — a JSON-RPC initialize reply on stdout means the server boots:
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}\n' \
+  | podman run --rm -i phone-eye
+```
+
+Client wiring keeps the stdio shape, with the container as the command. Use
+`--network host` so adb can reach a Wi-Fi phone and your vision MCP:
+
+```jsonc
+"phone-eye": { "command": "podman", "args": [
+  "run", "--rm", "-i", "--network", "host",
+  "-e", "ANDROID_SERIAL=192.168.1.23:5555",
+  "-e", "PHONE_EYE_VISION_URL=http://192.168.1.5:8102/mcp",
+  "phone-eye"] }
+```
+
 ### Connect the phone (one-time)
 
 USB once, then Wi-Fi forever:
