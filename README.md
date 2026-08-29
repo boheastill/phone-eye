@@ -31,7 +31,7 @@ That's everything. **No app to install on the phone. No root. No extra server.**
 | Tap / swipe / type | Typing is ASCII (Chinese input needs a clipboard trick — known adb limit) | The very first "allow USB debugging?" popup on a *new* computer key — that one tap is yours |
 | Survive Wi-Fi adb drops (auto-reconnect) | Some vendor ROMs restrict input on lock screens (e.g. MIUI) | iOS — different universe |
 | Run 24/7 unattended; unexpected popups get read & handled by your agent | Vision quality depends on the model you bring | |
-| Multiple phones (point `ANDROID_SERIAL` at each) | | |
+| Multiple phones (one phone-eye process per phone, set `ANDROID_SERIAL` for each) | | |
 
 **The 60-second rule:** every Android requires one human moment — enable debugging + authorize once. After that, the phone belongs to your agent, even over Wi-Fi, even after reboots of the *computer*.
 
@@ -42,9 +42,11 @@ That's everything. **No app to install on the phone. No root. No extra server.**
 Settings → About phone → tap **Build number** 7× (unlocks Developer options) → Developer options → **USB debugging ON**.
 (Got stuck? Tell us your phone model in Discussions — we'll walk you through it. MIUI/HyperOS may also ask you to sign into a Xiaomi account first.)
 
-### 2. Plug USB once, then go wireless
+### 2. Install adb (if you don't have it), plug USB once, then go wireless
 
 ```bash
+# macOS: brew install android-platform-tools · Ubuntu/Debian: sudo apt install adb
+# Windows: scoop install adb  (or download Android platform-tools)
 adb devices          # phone shows up? tap "Allow" on its popup — check "always allow"
 adb tcpip 5555       # switch to Wi-Fi mode
 adb connect <phone-ip>:5555   # now unplug the cable, forever

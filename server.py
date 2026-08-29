@@ -49,22 +49,46 @@ def _adb(*args: str, timeout: int = 30, binary: bool = False, _retried: bool = F
     if ADB_SERIAL:
         cmd += ["-s", ADB_SERIAL]
     cmd += list(args)
-    r = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    try:
+        r = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    except FileNotFoundError:
+        raise RuntimeError(
+            "`adb` is not on PATH — install Android platform-tools first "
+            "(macOS: brew install android-platform-tools · Debian/Ubuntu: sudo apt install adb · "
+            "Windows: scoop install adb or download platform-tools)"
+        )
     if r.returncode != 0 or (binary and not r.stdout):
         err = r.stderr.decode(errors="ignore").strip()
         low = err.lower()
-        # Distinguish the three failure classes strangers actually hit.
+        if "more than one device" in low:
+            raise RuntimeError(
+                "Multiple Android devices connected — set ANDROID_SERIAL (e.g. 192.168.x.x:5555) "
+                "to pick one. One phone per phone-eye process."
+            )
+        # Distinguish the failure classes strangers actually hit.
         if "no devices" in low or "device offline" in low or "not found" in low or "offline" in low:
             # Wi-Fi adb drops silently after days — one auto-reconnect attempt.
             if ADB_SERIAL and ":" in ADB_SERIAL and not _retried:
                 c = subprocess.run(["adb", "connect", ADB_SERIAL], capture_output=True, timeout=15)
                 if b"connected" in c.stdout:
+                    # Replay ONLY read-only commands; input* actions are never
+                    # replayed (a dropped ack after execution would double-tap).
+                    read_only = (
+                        args and (args[0] == "exec-out"
+                                  or (args[0] == "shell" and args[1:2] and args[1] in ("cat", "uiautomator", "getprop", "dumpsys")))
+                    )
+                    if not read_only:
+                        raise RuntimeError(
+                            "Wi-Fi adb dropped and was reconnected; the action was NOT replayed "
+                            "to avoid double-execution — please call the tool again."
+                        )
                     return _adb(*args, timeout=timeout, binary=binary, _retried=True)
             raise RuntimeError(
                 f"No Android device reachable ({err or 'adb returned nothing'}). "
                 f"Check `adb devices`; for Wi-Fi adb run `adb connect <ip>:5555`."
             )
         if binary and _retried is False and args and args[0] == "exec-out":
+            # exec-out here is read-only screencap; safe to retry once.
             return _adb(*args, timeout=timeout, binary=True, _retried=True)
         raise RuntimeError(f"adb {' '.join(args)} failed: {err[:200] or f'rc={r.returncode}, empty output'}")
     return r.stdout
@@ -262,7 +286,13 @@ def phone_type(text: str) -> str:
         if not text.isascii():
             return ("refused: non-ASCII text is silently dropped by adb input; "
                     "use a clipboard-based method for CJK")
-        _adb("shell", "input", "text", text.replace(" ", "%s"), timeout=15)
+        if any(c in text for c in "\n\r\t"):
+            return "refused: control characters (newline/tab) cannot be typed via adb input"
+        # Device-side shell injection guard: adb shell joins args through the
+        # phone's sh -c, so ; $() ` | & would execute on the phone. Wrap the
+        # whole text in single quotes with ' escaping, keep the %s space hack.
+        safe = "'" + text.replace("'", "'\\''") + "'"
+        _adb("shell", "input", "text", safe.replace(" ", "%s"), timeout=15)
         return f"typed {len(text)} chars"
     except Exception as e:  # noqa: BLE001
         return f"phone_type failed: {e}"
