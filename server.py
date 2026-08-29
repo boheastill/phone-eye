@@ -38,19 +38,35 @@ ADB_SERIAL = os.environ.get("ANDROID_SERIAL", "")  # empty = first device
 VISION_URL = os.environ.get("PHONE_EYE_VISION_URL", "http://127.0.0.1:8102/mcp")
 VISION_TOOL = os.environ.get("PHONE_EYE_VISION_TOOL", "describe_image")
 SHOT_DIR = os.environ.get("PHONE_EYE_SHOTS", "/tmp/phone-eye")
+# Built-in direct vision (no MCP server needed): any OpenAI-compatible endpoint.
+VISION_API_KEY = os.environ.get("PHONE_EYE_VISION_API_KEY", "")
+VISION_BASE_URL = os.environ.get("PHONE_EYE_VISION_BASE_URL", "https://api.openai.com/v1")
+VISION_MODEL = os.environ.get("PHONE_EYE_VISION_MODEL", "gpt-4o-mini")
 
 
-def _adb(*args: str, timeout: int = 30, binary: bool = False) -> bytes:
+def _adb(*args: str, timeout: int = 30, binary: bool = False, _retried: bool = False) -> bytes:
     cmd = ["adb"]
     if ADB_SERIAL:
         cmd += ["-s", ADB_SERIAL]
     cmd += list(args)
     r = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if r.returncode != 0 and not binary:
-        raise RuntimeError(
-            f"adb {' '.join(args)} -> rc={r.returncode}: "
-            f"{r.stderr.decode(errors='ignore')[:200]}"
-        )
+    if r.returncode != 0 or (binary and not r.stdout):
+        err = r.stderr.decode(errors="ignore").strip()
+        low = err.lower()
+        # Distinguish the three failure classes strangers actually hit.
+        if "no devices" in low or "device offline" in low or "not found" in low or "offline" in low:
+            # Wi-Fi adb drops silently after days — one auto-reconnect attempt.
+            if ADB_SERIAL and ":" in ADB_SERIAL and not _retried:
+                c = subprocess.run(["adb", "connect", ADB_SERIAL], capture_output=True, timeout=15)
+                if b"connected" in c.stdout:
+                    return _adb(*args, timeout=timeout, binary=binary, _retried=True)
+            raise RuntimeError(
+                f"No Android device reachable ({err or 'adb returned nothing'}). "
+                f"Check `adb devices`; for Wi-Fi adb run `adb connect <ip>:5555`."
+            )
+        if binary and _retried is False and args and args[0] == "exec-out":
+            return _adb(*args, timeout=timeout, binary=True, _retried=True)
+        raise RuntimeError(f"adb {' '.join(args)} failed: {err[:200] or f'rc={r.returncode}, empty output'}")
     return r.stdout
 
 
@@ -61,7 +77,53 @@ def _shot_path() -> str:
 
 
 # ------------------------------------------------------------- vision MCP ----
+def _vision_direct(png_path: str, question: str) -> str:
+    """Built-in mode: any OpenAI-compatible vision endpoint, no MCP server needed.
+
+    Enabled by setting PHONE_EYE_VISION_API_KEY (plus optional BASE_URL/MODEL).
+    This is the zero-dependency path we recommend in the README quickstart.
+    """
+    import base64 as _b64
+    b64 = _b64.b64encode(open(png_path, "rb").read()).decode()
+    r = requests.post(
+        f"{VISION_BASE_URL.rstrip('/')}/chat/completions",
+        headers={"Authorization": f"Bearer {VISION_API_KEY}"},
+        timeout=180,
+        json={
+            "model": VISION_MODEL,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": question},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ]}],
+            "max_tokens": 1024,
+        },
+    )
+    if r.status_code != 200:
+        raise RuntimeError(
+            f"vision endpoint {VISION_BASE_URL} -> HTTP {r.status_code}: "
+            f"{r.text[:200]} (check PHONE_EYE_VISION_API_KEY / _BASE_URL / _MODEL)"
+        )
+    return r.json()["choices"][0]["message"]["content"]
+
+
 def _vision_look(png_path: str, question: str) -> str:
+    """Route to built-in direct vision (API key set) or an MCP vision server."""
+    if VISION_API_KEY:
+        return _vision_direct(png_path, question)
+    try:
+        return _vision_mcp(png_path, question)
+    except requests.exceptions.ConnectionError as e:
+        raise RuntimeError(
+            f"No vision server reachable at {VISION_URL} and no built-in key set. "
+            f"Two fixes: (a) quickest — export PHONE_EYE_VISION_API_KEY=<key> "
+            f"[PHONE_EYE_VISION_BASE_URL=<openai-compatible-url> "
+            f"PHONE_EYE_VISION_MODEL=<vision-model>] for built-in vision; "
+            f"(b) or run an MCP vision server exposing describe_image() and point "
+            f"PHONE_EYE_VISION_URL at it. Original error: {e}"
+        ) from e
+
+
+def _vision_mcp(png_path: str, question: str) -> str:
     """Call describe_image on any MCP vision server (streamable-http)."""
     base = VISION_URL.rstrip("/")
     h = {"Content-Type": "application/json",

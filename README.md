@@ -47,10 +47,18 @@ git clone https://github.com/boheastill/phone-eye
 cd phone-eye
 pip install -r requirements.txt
 
-# env (defaults shown):
-export ANDROID_SERIAL=""                      # empty = first adb device; or 192.168.x.x:5555
-export PHONE_EYE_VISION_URL="http://127.0.0.1:8102/mcp"  # your vision MCP
+# 1) eyes: built-in vision via ANY OpenAI-compatible endpoint (no extra server):
+export PHONE_EYE_VISION_API_KEY=<your-key>
+# optional: PHONE_EYE_VISION_BASE_URL (default api.openai.com/v1) + PHONE_EYE_VISION_MODEL (default gpt-4o-mini)
+#    e.g. GLM: ..._BASE_URL=https://open.bigmodel.cn/api/paas/v4  ..._MODEL=glm-4.6v-flash
+#    e.g. local: ..._API_KEY=sk-noauth  ..._BASE_URL=http://<lan-host>:8080/v1  ..._MODEL=<your qwen-vl>
+
+# 2) hand: your Android over adb (empty ANDROID_SERIAL = first device):
+export ANDROID_SERIAL=""                      # or 192.168.x.x:5555 (Wi-Fi adb)
 ```
+
+Prefer routing vision through an MCP server? Set `PHONE_EYE_VISION_URL` instead
+(any server exposing `describe_image(path, question)`) — see [docs/fleet.md](docs/fleet.md).
 
 Wire it into your client (stdio):
 
