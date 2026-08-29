@@ -131,6 +131,7 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
 - [移动 Web QA 循环](examples/loop-mobile-web-qa.md)——agent 在真机上验收自己的活
 - [走过 OEM 设置向导](examples/device-setup-wizard.md)——弹什么都能视觉应对
 - [表单回归检查](examples/form-regression.md)
+- [无人值守哨兵](examples/unattended-sentinel.md)——你的 agent 值夜班:唤醒→解锁→直达→查看→存证
 
 想了解原理、想改代码?[工作原理白皮书](docs/how-it-works.md)。要以常驻 HTTP 服务跑?[docs/fleet.md](docs/fleet.md)。
 

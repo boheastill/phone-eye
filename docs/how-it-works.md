@@ -3,7 +3,7 @@
 > Read this if you want to understand the moving parts well enough to change
 > them. It maps every behavior to its code location and explains *why* each
 > design decision was made — including the ones we'd do differently today.
-> (~10 min read. Code references are to `server.py`, a single ~300-line file.)
+> (~12 min read. Code references are to `server.py`, a single ~380-line file.)
 
 ## The whole system in one picture
 
@@ -30,7 +30,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Design stance: **five verbs, nothing else.** No DSL, no recorder, no workflow
+Design stance: **seven verbs, nothing else.** No DSL, no recorder, no workflow
 engine. Whatever orchestration you need, your agent already does it better
 than a config format we could invent. Our job is to make each verb reliable
 and let the intelligence live in the caller.
@@ -161,24 +161,25 @@ small enough for agent context.
 
 ## How to add a verb (the modification you'll actually do)
 
-Say you want `phone_key(keycode)` for hardware keys:
-
-```python
-@mcp.tool()
-def phone_key(keycode: int) -> str:
-    """Press a hardware key (4=Back, 3=Home, 224=Wake…)."""
-    try:
-        _adb("shell", "input", "keyevent", str(int(keycode)), timeout=15)
-        return f"key {keycode}"
-    except Exception as e:
-        return f"phone_key failed: {e}"
-```
+`phone_key` started as this section's hypothetical example and graduated to
+production (a field evaluation needed `wake` for unattended sentinels). The
+real implementation adds one decision the template didn't have: a **named-key
+whitelist** (`_KEY_EVENTS`) with raw numeric fallback — named keys are
+self-documenting in agent transcripts ("wake" reads better than 224) and the
+whitelist keeps fat-fingered names from becoming keycodes.
 
 That's the pattern: thin, typed, timeout'd, error-as-string (agents read
-strings better than tracebacks), side-effect-free of our state. Then:
-`grep README* for the tools table` and add a row — the docs table and the
-code must stay in lockstep; the CI smoke test asserts the tool list, so add
-your verb there too (`.github/workflows/smoke.yml`).
+strings better than tracebacks), side-effect-free of our state, and every
+free-form argument gets either a whitelist or a quoting guard. Then: add a
+row to the tools tables in BOTH READMEs — docs and code must stay in
+lockstep; the CI smoke test asserts the tool list, so add your verb there too
+(`.github/workflows/smoke.yml`).
+
+The same graduation produced `phone_intent` (deep-page arrival via
+`am start`): intent args get metacharacter refusal *plus* `_shq` quoting —
+belt and suspenders, because the quoting alone would be safe but a typo'd
+action containing `;` should fail loudly at the door, not silently as a
+weird action string.
 
 ## Test harness without a phone
 

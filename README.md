@@ -136,6 +136,7 @@ screenshots then never leave your LAN.
 - [Mobile web QA loop](examples/loop-mobile-web-qa.md) — the agent verifies its own work on a real screen
 - [Surviving an OEM setup wizard](examples/device-setup-wizard.md) — vision handles whatever pops up
 - [Form regression check](examples/form-regression.md)
+- [Unattended sentinel](examples/unattended-sentinel.md) — your agent on night watch: wake → unlock → intent → look → screenshot
 
 Curious how it works — or want to modify it? Read the [whitepaper](docs/how-it-works.md)
 (architecture, failure-classification decision tree, security model, how to add a verb).
