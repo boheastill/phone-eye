@@ -122,6 +122,8 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
 | `phone_tap(x, y)` | 点击 |
 | `phone_swipe(x1, y1, x2, y2, ms?)` | 滑动 |
 | `phone_type(text)` | 输入 ASCII 文本 |
+| `phone_key(key)` | 按硬件键——`wake` 唤醒睡着的手机(无人值守刚需),back/home/recents 导航 |
+| `phone_intent(action, uri?, component?)` | 按 Android intent 直达任意页面(系统深页/应用页),无需坐标 |
 | `phone_screenshot()` | 截图存盘,返回路径 |
 
 ## 示例

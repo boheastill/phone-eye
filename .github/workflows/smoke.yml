@@ -22,7 +22,7 @@ jobs:
               except: continue
               if d.get('id') == 2:
                   names = sorted(t['name'] for t in d['result']['tools'])
-          expected = sorted(['phone_look','phone_tap','phone_swipe','phone_type','phone_screenshot'])
+          expected = sorted(['phone_look','phone_tap','phone_swipe','phone_type','phone_screenshot','phone_key','phone_intent'])
           assert names == expected, f"{names} != {expected}"
           print('tools OK:', names)
           PY

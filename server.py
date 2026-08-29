@@ -44,6 +44,12 @@ VISION_BASE_URL = os.environ.get("PHONE_EYE_VISION_BASE_URL", "https://api.opena
 VISION_MODEL = os.environ.get("PHONE_EYE_VISION_MODEL", "gpt-4o-mini")
 
 
+def _shq(s: str) -> str:
+    """Device-side shell single-quote wrap: adb shell joins argv and runs it
+    through the phone's sh -c, so metacharacters must be kept literal."""
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
 def _adb(*args: str, timeout: int = 30, binary: bool = False, _retried: bool = False) -> bytes:
     cmd = ["adb"]
     if ADB_SERIAL:
@@ -291,11 +297,72 @@ def phone_type(text: str) -> str:
         # Device-side shell injection guard: adb shell joins args through the
         # phone's sh -c, so ; $() ` | & would execute on the phone. Wrap the
         # whole text in single quotes with ' escaping, keep the %s space hack.
-        safe = "'" + text.replace("'", "'\\''") + "'"
+        safe = _shq(text)
         _adb("shell", "input", "text", safe.replace(" ", "%s"), timeout=15)
         return f"typed {len(text)} chars"
     except Exception as e:  # noqa: BLE001
         return f"phone_type failed: {e}"
+
+
+# Named hardware keys (whitelist — the unattended-sentinel essentials).
+_KEY_EVENTS = {
+    "wake": 224, "sleep": 223, "back": 4, "home": 3, "recents": 187,
+    "menu": 82, "power": 26, "volume_up": 24, "volume_down": 25,
+    "mute": 164, "camera": 27, "enter": 66, "del": 67, "tab": 61,
+}
+
+
+@mcp.tool()
+def phone_key(key: str) -> str:
+    """Press a hardware key — the unattended essential: `wake` (KEYCODE_WAKEUP)
+    revives a sleeping phone so look/tap can proceed; back/home/recents
+    navigate without coordinates.
+
+    Accepts a whitelisted name (wake/sleep/back/home/recents/menu/power/
+    volume_up/volume_down/mute/camera/enter/del/tab) or a raw Android
+    keycode number (e.g. 224).
+    """
+    try:
+        k = key.strip().lower()
+        if k in _KEY_EVENTS:
+            code = _KEY_EVENTS[k]
+        elif k.isdigit():
+            code = int(k)
+        else:
+            return (f"unknown key {key!r} — use a whitelisted name "
+                    f"({', '.join(sorted(_KEY_EVENTS))}) or a numeric keycode")
+        _adb("shell", "input", "keyevent", str(code), timeout=15)
+        return f"key {k} ({code})"
+    except Exception as e:  # noqa: BLE001
+        return f"phone_key failed: {e}"
+
+
+@mcp.tool()
+def phone_intent(action: str, data_uri: str = "", component: str = "") -> str:
+    """Open a screen by Android intent — reach deep system/app pages without
+    coordinates (e.g. action `android.settings.BLUETOOTH_SETTINGS`, or the
+    bluetooth picker `android.bluetooth.devicepicker.action.LAUNCH`).
+
+    Args:
+        action: the intent action string (required).
+        data_uri: optional data URI (-d).
+        component: optional explicit component, `pkg/.Activity` (-n).
+    """
+    try:
+        for s in (action, data_uri, component):
+            if s and (not s.isascii() or any(c in s for c in "\n\r\t ")):
+                return "refused: action/uri/component must be ASCII without spaces/control chars"
+            if s and any(c in s for c in ";|&$()`'\"<>"):
+                return "refused: shell metacharacters in intent args (valid actions never contain them)"
+        argv = ["shell", "am", "start", "-a", _shq(action)]
+        if data_uri:
+            argv += ["-d", _shq(data_uri)]
+        if component:
+            argv += ["-n", _shq(component)]
+        _adb(*argv, timeout=20)
+        return f"started {action}" + (f" · {data_uri}" if data_uri else "") + (f" · {component}" if component else "")
+    except Exception as e:  # noqa: BLE001
+        return f"phone_intent failed: {e}"
 
 
 @mcp.tool()

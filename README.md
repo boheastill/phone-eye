@@ -127,6 +127,8 @@ screenshots then never leave your LAN.
 | `phone_tap(x, y)` | Tap |
 | `phone_swipe(x1, y1, x2, y2, ms?)` | Swipe |
 | `phone_type(text)` | Type ASCII text |
+| `phone_key(key)` | Press a hardware key — `wake` revives a sleeping phone (the unattended essential), back/home/recents navigate |
+| `phone_intent(action, uri?, component?)` | Open any screen by Android intent (deep settings pages, app pages) without coordinates |
 | `phone_screenshot()` | Save screenshot to disk, return path |
 
 ## Examples
