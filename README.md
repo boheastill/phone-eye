@@ -149,3 +149,7 @@ UI-tree-only tools are blind to game canvases, images, and anything the accessib
 ## License
 
 MIT. Verified on Redmi K40 Gaming / Android 13 — add your device to the table via PR.
+
+---
+
+**Author**: [Bohea](https://boheastill.com) — independent industrial software engineer (Shenzhen). Operator HMIs · device integration · machine data into your customer's ERP. More runnable demos & engineering notes on the site.
